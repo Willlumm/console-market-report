@@ -1,11 +1,12 @@
+from datetime import date
 from pathlib import Path
 import re
 
 # Find GfK and GSD files in downloads
 
-gfk_fp = ""
+gfk_fp = None
 gfk_time = 0
-gsd_fp = ""
+gsd_fp = None
 gsd_time = 0
 
 for fp in Path(f"{Path.home()}/Downloads").iterdir():
@@ -22,7 +23,15 @@ for fp in Path(f"{Path.home()}/Downloads").iterdir():
             gsd_fp = fp
             gsd_time = time
 
-# Move files to archive and rename with date
+# Replace input files
+
+for fp in Path(".\\input_files").iterdir():
+    if (re.fullmatch("^gfk_.*$", str(fp)) and gfk_fp) or (re.fullmatch("^gsd_.*$", str(fp)) and gsd_fp):
+        fp.rename(f".\\input_files\\archive\\{fp.name}")
+if gfk_fp:
+    gfk_fp.rename(f".\\input_files\\gsd_{date.fromtimestamp(gfk_time)}.xlsx")
+if gsd_fp:
+    gsd_fp.rename(f".\\input_files\\gsd_{date.fromtimestamp(gsd_time)}.xlsx")
 
 # Update main data file
 
