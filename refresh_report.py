@@ -15,13 +15,13 @@ gsd_time = 0
 
 for fp in Path(f"{Path.home()}\\Downloads").iterdir():
 
-    if re.fullmatch("^.*NEW_HW_DATA.txt$", str(fp)):
+    if re.fullmatch(r"^.*NEW_HW_DATA.txt$", str(fp)):
         time = fp.stat().st_ctime
         if time > gfk_time:
             gfk_fp = fp
             gfk_time = time
 
-    elif re.fullmatch("^.*\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\.xlsx$", str(fp)):
+    elif re.fullmatch(r"^.*\w{8}-\w{4}-\w{4}-\w{4}-\w{12}\.xlsx$", str(fp)):
         time = fp.stat().st_ctime
         if time > gsd_time:
             gsd_fp = fp
@@ -63,6 +63,7 @@ territories = {
     "ASIA":     "JAPAN",
 }
 
+df = pd.read_csv(".\\data.csv")
 date_ref = pd.read_csv(".\\ref\\DATES.csv")
 dfs = []
 
@@ -75,6 +76,11 @@ if gfk_fp:
     gfk["Source"] = "GFK"
     gfk["CLASS"] = "ORIGINAL"
     gfk["HDSize"] = "UNKNOWN"
+
+    gfk["RefreshDate"] = date.today()
+    gfk["YearWeek"] = gfk["Year (W)"] * 10 + gfk["Week (W)"]
+    earliest = gfk.YearWeek.min()
+    df = df[(df.Source == "gfk") & (df.YearWeek < earliest)]
 
     gfk = gfk.merge(date_ref, how="left", left_on=["Year (W)", "Week (W)"], right_on=["YEAR", "WEEK"])
 
@@ -96,7 +102,7 @@ if gfk_fp:
     
     gfk = gfk.rename(columns={"Article Name": "SKU", "Main Platform": "Platform", "Year (W)": "Year", "Week (W)": "Week", "Units Panel (W)": "Panel Units", "Value Panel (W)": "Panel Value EURO"})
     gfk = gfk[gfk["Platform"].isin(["PS4", "PS5", "SWITCH", "XBOX ONE", "XBOX SERIES"])]
-    gfk = gfk[["Source", "SKU", "Platform", "Bundle", "HDSize", "CLASS", "Country", "Territory", "FY", "Year", "MONTH NEW", "Week", "Panel Units", "Panel Value EURO", "Extrapolation", "Units 100%", "Value Euro 100%", "Value Local 100%"]]
+    gfk = gfk[["Source", "SKU", "Platform", "Bundle", "HDSize", "CLASS", "Country", "Territory", "FY", "Year", "MONTH NEW", "Week", "Panel Units", "Panel Value EURO", "Extrapolation", "Units 100%", "Value Euro 100%", "Value Local 100%", "YearWeek", "RefreshDate"]]
 
     dfs.append(gfk)
     # gfk_fp.rename(f".\\input_files\\gfk_{date.fromtimestamp(gfk_time)}.txt")
@@ -113,6 +119,11 @@ if gsd_fp:
     gsd["Source"] = "GSD"
     gsd["CLASS"] = "ORIGINAL"
 
+    gsd["RefreshDate"] = date.today()
+    gsd["YearWeek"] = gsd.Year * 10 + gsd.Week
+    earliest = gsd.YearWeek.min()
+    df = df[(df.Source == "gsd") & (df.YearWeek < earliest)]
+
     for string, tag in classes.items():
         gsd.loc[gsd["SKU"].str.contains(string), "CLASS"] = tag
     gsd["Territory"] = gsd["Territory"].replace(territories)
@@ -128,13 +139,14 @@ if gsd_fp:
     
     # Rename and return data.
     gsd = gsd.rename(columns={"HD Size": "HDSize", "Territory_x": "Territory", "Units": "Panel Units", "Values": "Panel Value EURO"})
-    gsd = gsd[["Source", "SKU", "Platform", "Bundle", "HDSize", "CLASS", "Country", "Territory", "FY", "Year", "MONTH NEW", "Week", "Panel Units", "Panel Value EURO", "Extrapolation", "Units 100%", "Value Euro 100%", "Value Local 100%"]]
+    gsd = gsd[["Source", "SKU", "Platform", "Bundle", "HDSize", "CLASS", "Country", "Territory", "FY", "Year", "MONTH NEW", "Week", "Panel Units", "Panel Value EURO", "Extrapolation", "Units 100%", "Value Euro 100%", "Value Local 100%", "YearWeek", "RefreshDate"]]
     
     dfs.append(gsd)
     # gsd_fp.rename(f".\\input_file_archive\\gsd_{date.fromtimestamp(gsd_time)}.xlsx")
     
-if dfs:
+if len(dfs) > 1:
     df = pd.concat(dfs)
+    df.to_csv(".\\data.csv", index=False)
 else:
     print("No new files found.")
     exit()
@@ -150,7 +162,7 @@ report_fp = None
 report_cywk = 0
 
 for fp in Path(".\\reports").iterdir():
-    match = re.fullmatch(".*EUA Weekly Console HW Report CY(\d\d) WK(\d\d).xlsx", str(fp))
+    match = re.fullmatch(r".*EUA Weekly Console HW Report CY(\d\d) WK(\d\d).xlsx", str(fp))
     if match:
         cy, wk = match.groups()
         cywk = 100 * int(cy) + int(wk)
@@ -158,7 +170,13 @@ for fp in Path(".\\reports").iterdir():
             report_fp = fp
             report_cywk = cywk
 
+cy = df.Year.max()
+wk = df[df.Year == cy].Week.max()
+
 wb = xw.Book(report_fp)
 sheet = wb.sheets("weekly")
 sheet.range("A:R").clear_contents()
 sheet["A1"].options(index=False, header=True).value = df
+wb.save(f".\\reports\\EUA Weekly Console HW Report CY{cy-2000:02} WK{wk:02}.xlsx")
+
+print("Finished!")
