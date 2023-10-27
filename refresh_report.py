@@ -150,6 +150,7 @@ if dfs:
     df.to_csv(".\\data.csv", index=False)
 else:
     print("No files found.")
+    input()
     exit()
 
 # Update report
