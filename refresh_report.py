@@ -15,7 +15,7 @@ gsd_time = 0
 
 for fp in Path(f"{Path.home()}\\Downloads").iterdir():
 
-    if re.fullmatch(r"^.*NEW_HW_DATA.txt$", str(fp)):
+    if re.fullmatch(r"^.*NEW_HW_DATA.*.txt$", str(fp)):
         time = fp.stat().st_ctime
         if time > gfk_time:
             gfk_fp = fp
@@ -137,7 +137,6 @@ if gsd_fp:
     gsd["Value Euro 100%"] = gsd["Values"] / gsd["Extrapolation"]
     gsd["Value Local 100%"] = ""
     
-    # Rename and return data.
     gsd = gsd.rename(columns={"HD Size": "HDSize", "Territory_x": "Territory", "Units": "Panel Units", "Values": "Panel Value EURO"})
     gsd = gsd[["Source", "SKU", "Platform", "Bundle", "HDSize", "CLASS", "Country", "Territory", "FY", "Year", "MONTH NEW", "Week", "Panel Units", "Panel Value EURO", "Extrapolation", "Units 100%", "Value Euro 100%", "Value Local 100%", "YearWeek", "RefreshDate"]]
     
