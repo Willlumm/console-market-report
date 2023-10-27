@@ -78,9 +78,9 @@ if gfk_fp:
     gfk["HDSize"] = "UNKNOWN"
 
     gfk["RefreshDate"] = date.today()
-    gfk["YearWeek"] = gfk["Year (W)"] * 10 + gfk["Week (W)"]
+    gfk["YearWeek"] = gfk["Year (W)"] * 100 + gfk["Week (W)"]
     earliest = gfk.YearWeek.min()
-    df = df[(df.Source == "gfk") & (df.YearWeek < earliest)]
+    gfk_old = df[(df.Source == "GFK") & (df.YearWeek < earliest)]
 
     gfk = gfk.merge(date_ref, how="left", left_on=["Year (W)", "Week (W)"], right_on=["YEAR", "WEEK"])
 
@@ -105,6 +105,7 @@ if gfk_fp:
     gfk = gfk[["Source", "SKU", "Platform", "Bundle", "HDSize", "CLASS", "Country", "Territory", "FY", "Year", "MONTH NEW", "Week", "Panel Units", "Panel Value EURO", "Extrapolation", "Units 100%", "Value Euro 100%", "Value Local 100%", "YearWeek", "RefreshDate"]]
 
     dfs.append(gfk)
+    dfs.append(gfk_old)
     # gfk_fp.rename(f".\\input_files\\gfk_{date.fromtimestamp(gfk_time)}.txt")
     
 if gsd_fp:
@@ -120,9 +121,9 @@ if gsd_fp:
     gsd["CLASS"] = "ORIGINAL"
 
     gsd["RefreshDate"] = date.today()
-    gsd["YearWeek"] = gsd.Year * 10 + gsd.Week
+    gsd["YearWeek"] = gsd.Year * 100 + gsd.Week
     earliest = gsd.YearWeek.min()
-    df = df[(df.Source == "gsd") & (df.YearWeek < earliest)]
+    gsd_old = df[(df.Source == "GSD") & (df.YearWeek < earliest)]
 
     for string, tag in classes.items():
         gsd.loc[gsd["SKU"].str.contains(string), "CLASS"] = tag
@@ -141,13 +142,14 @@ if gsd_fp:
     gsd = gsd[["Source", "SKU", "Platform", "Bundle", "HDSize", "CLASS", "Country", "Territory", "FY", "Year", "MONTH NEW", "Week", "Panel Units", "Panel Value EURO", "Extrapolation", "Units 100%", "Value Euro 100%", "Value Local 100%", "YearWeek", "RefreshDate"]]
     
     dfs.append(gsd)
+    dfs.append(gsd_old)
     # gsd_fp.rename(f".\\input_file_archive\\gsd_{date.fromtimestamp(gsd_time)}.xlsx")
     
-if len(dfs) > 1:
+if dfs:
     df = pd.concat(dfs)
     df.to_csv(".\\data.csv", index=False)
 else:
-    print("No new files found.")
+    print("No files found.")
     exit()
 
 # Update report
