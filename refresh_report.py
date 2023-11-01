@@ -1,8 +1,11 @@
 from datetime import date
+import os
 from pathlib import Path
 import pandas as pd
 import re
 import xlwings as xw
+
+PATH = os.path.abspath(os.path.dirname(__file__))
 
 # Find GfK and GSD files in downloads
 
@@ -63,8 +66,8 @@ territories = {
     "ASIA":     "JAPAN",
 }
 
-df = pd.read_csv(".\\data.csv")
-date_ref = pd.read_csv(".\\ref\\DATES.csv")
+df = pd.read_csv(f"{PATH}\\data.csv")
+date_ref = pd.read_csv(f"{PATH}\\ref\\DATES.csv")
 dfs = []
 
 if gfk_fp:
@@ -84,7 +87,7 @@ if gfk_fp:
 
     gfk = gfk.merge(date_ref, how="left", left_on=["Year (W)", "Week (W)"], right_on=["YEAR", "WEEK"])
 
-    gfk_extrap = pd.read_csv(".\\ref\\EXTRAPOLATION HW GFK.csv")
+    gfk_extrap = pd.read_csv(f"{PATH}\\ref\\EXTRAPOLATION HW GFK.csv")
     gfk = gfk.merge(gfk_extrap, how="left", left_on=["Country", "FY", "Main Platform"], right_on=["Territory", "FY", "Format"])
     gfk[["Units Panel (W)", "Value Panel (W)", "Value Panel EUR (W)"]] = gfk[["Units Panel (W)", "Value Panel (W)", "Value Panel EUR (W)"]].replace(",", "", regex=True)
     gfk["Units 100%"] = gfk["Units Panel (W)"].astype(float) / gfk["Extrapolation"]
@@ -131,7 +134,7 @@ if gsd_fp:
 
     gsd = gsd.merge(date_ref, how="left", left_on=["Year", "Week"], right_on=["YEAR", "WEEK"])
 
-    gsd_extrap = pd.read_csv(".\\ref\\EXTRAPOLATION HW GSD.csv")
+    gsd_extrap = pd.read_csv(f"{PATH}\\ref\\EXTRAPOLATION HW GSD.csv")
     gsd_extrap["Territory"] = gsd_extrap["Territory"].str.upper()
     gsd = gsd.merge(gsd_extrap, how="left", left_on=["Country", "FY", "Week", "Platform"], right_on=["Territory", "FY", "Week", "Format"])
     gsd["Units 100%"] = gsd["Units"] / gsd["Extrapolation"]
@@ -147,7 +150,7 @@ if gsd_fp:
     
 if dfs:
     df = pd.concat(dfs)
-    df.to_csv(".\\data.csv", index=False)
+    df.to_csv(f"{PATH}\\data.csv", index=False)
 else:
     print("No files found.")
     input()
@@ -163,7 +166,7 @@ print(f"Inserting {len(df):,} rows in report...")
 report_fp = None
 report_cywk = 0
 
-for fp in Path(".\\reports").iterdir():
+for fp in Path(f"{PATH}\\reports").iterdir():
     match = re.fullmatch(r".*EUA Weekly Console HW Report CY(\d\d) WK(\d\d).xlsx", str(fp))
     if match:
         cy, wk = match.groups()
@@ -179,6 +182,6 @@ wb = xw.Book(report_fp)
 sheet = wb.sheets("weekly")
 sheet.range("A:R").clear_contents()
 sheet["A1"].options(index=False, header=True).value = df
-wb.save(f".\\reports\\EUA Weekly Console HW Report CY{cy-2000:02} WK{wk:02}.xlsx")
+wb.save(f"{PATH}\\reports\\EUA Weekly Console HW Report CY{cy-2000:02} WK{wk:02}.xlsx")
 
 print("Finished!")
